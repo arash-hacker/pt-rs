@@ -1,24 +1,26 @@
-type LightMode =i32
+use crate::color::*;
+use crate::scene::*;
+type LightMode =i32;
 
 enum LightModeEnum {
-	LightModeRandom = 0
-	LightModeAll=1
+	LightModeRandom = 0,
+	LightModeAll=1,
 }
 
-type SpecularMode =i32
+pub type SpecularMode =i32;
 
-let	SpecularModeNaive = 0
-let	SpecularModeFirst = 1
-let	SpecularModeAll = 2
+pub static SpecularModeNaive:i32 = 0;
+pub static SpecularModeFirst:i32 = 1;
+pub	static SpecularModeAll:i32 = 2;
 
-type BounceType =i32
+type BounceType =i32;
 
-let	BounceTypeAny = 0
-let	BounceTypeDiffuse =1
-let	BounceTypeSpecular =2
+pub static BounceTypeAny:i32 = 0;
+pub static BounceTypeDiffuse:i32 =1;
+pub static BounceTypeSpecular:i32 =2;
 
 trait Sampler {
-	Sample(scene :Scene, ray: Ray, rnd:f64)-> Color
+	fn Sample(scene :Scene, ray: Ray, rnd:f64)-> Color;
 }
 
 func NewSampler(firstHitSamples:i32, maxBounces :i32) -> DefaultSampler {

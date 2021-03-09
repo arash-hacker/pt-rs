@@ -1,7 +1,6 @@
-package pt
-
-import "math"
-
+use crate::material::*;
+use crate::vector::*;
+use crate::mesh::*;
 struct SphericalHarmonic {
 	PositiveMaterial :Material,
 	NegativeMaterial :Material,
@@ -9,7 +8,7 @@ struct SphericalHarmonic {
 	mesh             :Mesh,
 }
 
-func NewSphericalHarmonic(l:i32, m: i32, pm:Material, nm: Material)-> Shape {
+fn NewSphericalHarmonic(l:i32, m: i32, pm:Material, nm: Material)-> Shape {
 	let sh = &SphericalHarmonic{}
 	sh.PositiveMaterial = pm
 	sh.NegativeMaterial = nm

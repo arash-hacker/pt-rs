@@ -4,75 +4,93 @@ use crate::util;
 use crate::common;
 use std::{collections::HashMap};
 use image::*;
-trait Texture{
-	fn Sample(u:f64, v:f64 )->Color;
-	fn NormalSample(u:f64, v :f64)-> Vector ;
-	fn BumpSample(u:f64, v :f64)-> Vector ;
-	fn MulScalar(a:f64)->  Texture;
-	fn Pow(a:f64) -> Texture;
-}
-
 
 pub fn init() {}
 
-fn GetTexture(path:String)->  Texture {
-	let textures:HashMap<String,Texture>= HashMap::new();
-	if textures.contains_key(&path){
-		return textures.get(&path);
-	}
-	if LoadTexture(path) as bool {
-		textures.insert(path, LoadTexture(path));
-		return textures.get(path)
-	}
-	return None
-}
-
-fn LoadTexture(path:String) ->Texture {
-	println!("Loading IMG: {}\n", path);
-	let im = util::LoadImage(path).unwrap();
-	return NewTexture(im)
-}
-
-pub struct ColorTexture{
+#[derive(Debug, Clone)]
+pub struct Texture{
 	Width  :i32,
 	Height :i32,
 	Data   :Vec<Color>,
 }
+fn GetTexture(path:&str)-> Option<Texture> {
+
+	let mut textures:HashMap<String,Texture>= HashMap::new();
+	if textures.contains_key(path){
+		let v=textures.get(path).unwrap();
+		return Some(Texture{Width:v.Width,Height:v.Height,Data:(*v.Data).to_vec()});
+	}
+	return match LoadTexture(path){
+		Some(t)=>{
+			textures.insert(path.to_string(), LoadTexture(path).unwrap());
+			let v=textures.get(path).unwrap();
+			return Some(Texture{Width:v.Width,Height:v.Height,Data:(*v.Data).to_vec()});
+		},
+		None=>None,
+	}
+
+}
+
+fn LoadTexture(path:&str) ->Option<Texture> {
+	println!("Loading IMG: {}\n", path);
+	let im = util::LoadImage(path.to_string()).unwrap();
+	return Some(NewTexture(im))
+}
+
 
 pub fn NewTexture(im:image::DynamicImage) -> Texture {
-	//TODO: better comparision spread like js
+	//TOD: better comparision spread like js
+	//https://subscription.packtpub.com/book/programming/9781788623926/1/ch01lvl1sec24/accepting-a-variable-number-of-arguments
 	let size:i32 = i32::max( im.dimensions().0 as i32,im.dimensions().1 as i32);
-	let mut data = vec![color::Black(); (size*size) as usize];
+	let mut data = vec![color::Black; (size*size) as usize];
 	for y in 0..size {
 		for x in 0..size {
 			let index = y*size + x;
-			data[index as usize] = color::NewColor(im.get_pixel(x as u32, y as u32)).Pow(2.2);
+			let target_pixel=im.get_pixel(x as u32, y as u32).to_rgb();
+			data[index as usize] = color::NewColor(
+				Color{
+					R:target_pixel[0] as f64,
+					G:target_pixel[1] as f64,
+					B:target_pixel[2] as f64,
+				}
+
+			).Pow(2.2);
 		}
 	}
-	return ColorTexture{
+	return Texture{
 		Width:size,
 		Height:size,
 		Data: data
 	}
 }
 
-impl ColorTexture{
+impl Texture{
+	pub fn Default()->Texture{
+		Texture{
+			Width:0,
+			Height:0,
+			Data:vec![]
+		}
+	}
 
 	pub fn Pow(&mut self,a :f64)-> Texture {
-		for (i,_)  in self.Data.iter().enumerate() {
-			self.Data[i] = self.Data[i].Pow(a)
+		//TODO : why index can do but :: (*self).Data.iter().enumerate()
+		for i  in 0..(*self).Data.len(){
+			(*self).Data[i] = (*self).Data[i].Pow(a)
 		}
-		return self
+		return Texture{Width:(*self).Width,Height:(*self).Height,Data:(*self.Data).to_vec()};
 	}
 	
-	pub fn MulScalar(&self,a:f64) ->Texture {
-		for (i,_) in self.Data.iter().enumerate() {
-			self.Data[i] = self.Data[i].MulScalar(a)
+	pub fn MulScalar(&mut self,a:f64) ->Texture {
+		for i  in 0..(*self).Data.len(){
+			(*self).Data[i] = (*self).Data[i].MulScalar(a)
 		}
-		return self
+		return Texture{Width:(*self).Width,Height:(*self).Height,Data:(*self.Data).to_vec()};
 	}
 	
 	pub fn bilinearSample(&self, u:f64, v:f64)-> Color {
+		let mut v=v;
+		let mut u=u;
 		if u == 1.0 {
 			u -= common::EPS as f64;
 		}
@@ -91,7 +109,7 @@ impl ColorTexture{
 		let c01 = self.Data[(y1*self.Width+x0) as usize];
 		let c10 = self.Data[(y0*self.Width+x1) as usize];
 		let c11 = self.Data[(y1*self.Width+x1) as usize];
-		let mut c = color::Black();
+		let mut c = color::Black;
 		c = c.Add(c00.MulScalar((1.0 - x) * (1.0 - y)));
 		c = c.Add(c10.MulScalar(x * (1.0 - y)));
 		c = c.Add(c01.MulScalar((1.0 - x) * y));
@@ -100,8 +118,8 @@ impl ColorTexture{
 	}
 	
 	pub fn Sample(&self, u:f64, v:f64)-> Color {
-		u = util::Fract(util::Fract(u) + 1.0);
-		v = util::Fract(util::Fract(v) + 1.0);
+		let u = util::Fract(util::Fract(u) + 1.0);
+		let v = util::Fract(util::Fract(v) + 1.0);
 		return self.bilinearSample(u, 1.0-v)
 	}
 	

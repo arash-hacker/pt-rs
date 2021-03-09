@@ -1,3 +1,4 @@
+#[derive(Debug,Clone, Copy)]
 pub struct Color {
 	pub R:f64,
 	pub G:f64,
@@ -9,12 +10,14 @@ pub struct RGBA{
 	pub B:f64,
 	pub A:f64,
 }
-pub fn Black()->Color{
-	Color{R:0.0, G:0.0, B:0.0}
-}
-pub fn White()->Color{
-	Color{R:1.0, G:1.0, B:1.0}
-}
+pub static  Black:Color= Color{R:0.0, G:0.0, B:0.0};
+pub static  White:Color= Color{R:1.0, G:1.0, B:1.0};
+// pub fn Black()->Color{
+// 	Color{R:0.0, G:0.0, B:0.0}
+// }
+// pub fn White()->Color{
+// 	Color{R:1.0, G:1.0, B:1.0}
+// }
 pub fn HexColor(x:i32)-> Color {
 	let r = ((x>>16)&0xff) as f64 / 255.0;
 	let g = ((x>>8)&0xff) as f64  / 255.0;

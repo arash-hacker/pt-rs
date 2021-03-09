@@ -1,0 +1,2 @@
+removed colortexture     
+static textures;

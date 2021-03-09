@@ -1,39 +1,45 @@
+use crate::color::*;
+use crate::texture::*;
+use crate::vector::*;
+use crate::shape::*;
+use crate::tree::*;
+use crate::hit::*;
 
 struct Scene {
 	Color        :Color,
 	Texture      :Texture,
 	TextureAngle :f64,
-	Shapes       :[Shape],
-	Lights       :[Shape],
+	Shapes       :Vec<Shape>,
+	Lights       :Vec<Shape>,
 	tree         :Tree,
 	rays         :u64,
 }
 
 impl Scene{
 
-	fn Compile(&self) {
+	pub fn Compile(&mut self) {
 		for shape in self.Shapes {
-			shape.Compile()
+			shape.Compile();
 		}
 		if self.tree == None {
-			self.tree = NewTree(self.Shapes)
+			*self.tree = NewTree(self.Shapes);
 		}
 	}
 	
-	fn Add(&self,shape :Shape) {
-		self.Shapes = append(self.Shapes, shape)
-		if shape.MaterialAt(Vector{}).Emittance > 0 {
-			self.Lights = append(self.Lights, shape)
+	pub fn Add(&mut self,shape :Shape) {
+		self.Shapes.append(shape);
+		if shape.MaterialAt(Vector::Default()).Emittance > 0 {
+			self.Lights.append(shape) ;
 		}
 	}
 	
-	fn RayCount(&self) ->u64 {
-		return atomic.LoadUint64(&self.rays)
+	pub fn RayCount(&self) ->u64 {
+		self.rays
 	}
 	
-	fn Intersect(&self,r:Ray)-> Hit {
-		atomic.AddUint64(&self.rays, 1)
-		return self.tree.Intersect(r)
+	pub fn Intersect(&mut self,r:Ray)-> Hit {
+		*self.rays=*self.rays+1;
+		self.tree.Intersect(r)
 	}
 }
 

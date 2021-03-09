@@ -2,7 +2,7 @@ extern crate pt;
 use pt::*;
 fn main() {
 	println!("{}",rand::random::<f64>());
-	let s=texture::Texture{};
+	// let s=texture::Texture::Default();
 
 	// let scene = scene::Scene{}
 	// let material = DiffuseMaterial(White)

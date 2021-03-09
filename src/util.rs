@@ -17,14 +17,14 @@ pub fn Cone(direction :Vector, theta:f64, u:f64, v:f64) -> Vector {
 	if theta < common::EPS as f64 {
 		return direction
 	}
-	theta = theta * (1.0 - (2.0 * f64::acos(u) / PI));
+	let theta = theta * (1.0 - (2.0 * f64::acos(u) / PI));
 	let m1 = f64::sin(theta);
 	let m2 = f64::cos(theta);
 	let a = v * 2.0 * PI;
 	let q = vector::RandomUnitVector();
 	let s = direction.Cross(q);
 	let t = direction.Cross(s);
-	let d = Vector::Default();
+	let mut  d = Vector::Default();
 	d = d.Add(s.MulScalar(m1 * f64::cos(a)));
 	d = d.Add(t.MulScalar(m1 * f64::sin(a)));
 	d = d.Add(direction.MulScalar(m2));
@@ -60,8 +60,9 @@ pub fn DurationString(d: time::Duration) ->String {
 	return format!("{}:{}:{}", h, m, s)
 }
 
-pub fn NumberString(x:f64) ->String {
+pub fn NumberString(x: f64) ->String {
 	let suffixes = &["", "k", "M", "G"];
+	let mut x=x;
 	for  suffix in suffixes.iter() {
 		if x < 1000.0 {
 			return format!("{}{}", x, suffix)

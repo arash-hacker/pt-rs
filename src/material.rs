@@ -1,3 +1,5 @@
+use crate::color::{*, self};
+use crate::texture::*;
 struct Material{
 	Color          :Color,
 	Texture        :Texture,
@@ -13,43 +15,130 @@ struct Material{
 	Transparent    :bool,
 }
 
-fn DiffuseMaterial(color Color)-> Material {
-	return Material{color, f64::INFINITY, f64::INFINITY, f64::INFINITY, f64::INFINITY, 1, 0, 1, 0, 0, -1, false}
+fn DiffuseMaterial(color:Color)-> Material {
+	return Material{
+		Color:color,
+		Texture: f64::INFINITY,
+		NormalTexture:  f64::INFINITY,
+		BumpTexture:   f64::INFINITY,
+		GlossTexture:    f64::INFINITY,
+		BumpMultiplier:	 1,
+		Emittance:	  0,
+		Index:	   1,
+		Gloss:	    0,
+		Tint:		 0,
+		Reflectivity:		  -1,
+		Transparent:		   false,
+	}
 }
 
-fn SpecularMaterial(color Color, index float64)-> Material {
-	return Material{color, f64::INFINITY, f64::INFINITY, f64::INFINITY, f64::INFINITY, 1, 0, index, 0, 0, -1, false}
+fn SpecularMaterial(color: Color, index: f64)-> Material {
+	return Material{
+		Color:color,
+		Texture: f64::INFINITY,
+		NormalTexture:  f64::INFINITY,
+		BumpTexture:  f64::INFINITY,
+		GlossTexture:  f64::INFINITY,
+		BumpMultiplier:  1,
+		Emittance:  0,
+		Index:  index,
+		Gloss:  0,
+		Tint:  0,
+		Reflectivity:  -1,
+		Transparent:  false}
 }
 
-fn GlossyMaterial(color Color, index, gloss float64)-> Material {
-	return Material{color, f64::INFINITY, f64::INFINITY, f64::INFINITY, f64::INFINITY, 1, 0, index, gloss, 0, -1, false}
+fn GlossyMaterial(color: Color, index:f64, gloss: f64)-> Material {
+	return Material{
+		Color:color,
+		Texture:f64::INFINITY,
+		NormalTexture:f64::INFINITY,
+		BumpTexture:f64::INFINITY,
+		GlossTexture:f64::INFINITY,
+		BumpMultiplier:1,
+		Emittance:0,
+		Index:index,
+		Gloss:gloss,
+		Tint:0,
+		Reflectivity:-1,
+		Transparent:false}
 }
 
-fn ClearMaterial(index, gloss float64)-> Material {
-	return Material{Black, f64::INFINITY, f64::INFINITY, f64::INFINITY, f64::INFINITY, 1, 0, index, gloss, 0, -1, true}
+fn ClearMaterial(index:f64, gloss:f64)-> Material {
+	return Material{
+		Color:Black,
+		Texture:f64::INFINITY,
+		NormalTexture:f64::INFINITY,
+		BumpTexture:f64::INFINITY,
+		GlossTexture:f64::INFINITY,
+		BumpMultiplier:1,
+		Emittance:0,
+		Index:index,
+		Gloss:gloss,
+		Tint:0,
+		Reflectivity:-1,
+		Transparent:true}
 }
 
-fn TransparentMaterial(color Color, index, gloss, tint float64)-> Material {
-	return Material{color, f64::INFINITY, f64::INFINITY, f64::INFINITY, f64::INFINITY, 1, 0, index, gloss, tint, -1, true}
+fn
+TransparentMaterial(color:Color,index:f64, gloss:f64, tint: f64)-> Material {
+	return Material{
+		Color:color,
+		Texture: f64::INFINITY,
+		NormalTexture: f64::INFINITY,
+		BumpTexture: f64::INFINITY,
+		GlossTexture: f64::INFINITY,
+		BumpMultiplier: 1,
+		Emittance: 0,
+		Index: index,
+		Gloss: gloss,
+		Tint: tint,
+		Reflectivity: -1,
+		Transparent: true}
 }
 
-fn MetallicMaterial(color Color, gloss, tint float64)-> Material {
-	return Material{color, f64::INFINITY, f64::INFINITY, f64::INFINITY, f64::INFINITY, 1, 0, 1, gloss, tint, 1, false}
+fn MetallicMaterial(color:Color, gloss:f64, tint: f64)-> Material {
+	return Material{
+		Color:color,
+		Texture:f64::INFINITY,
+		NormalTexture:f64::INFINITY,
+		BumpTexture:f64::INFINITY,
+		GlossTexture:f64::INFINITY,
+		BumpMultiplier:1,
+		Emittance:0,
+		Index:1,
+		Gloss:gloss,
+		Tint:tint,
+		Reflectivity:1,
+		Transparent:false
+	}
 }
 
-fn LightMaterial(color Color, emittance float64)-> Material {
-	return Material{color, f64::INFINITY, f64::INFINITY, f64::INFINITY, f64::INFINITY, 1, emittance, 1, 0, 0, -1, false}
+fn LightMaterial(color :Color, emittance: f64)-> Material {
+	return Material{
+		Color:color,
+		Texture:f64::INFINITY,
+		NormalTexture:f64::INFINITY,
+		BumpTexture:f64::INFINITY,
+		GlossTexture:f64::INFINITY,
+		BumpMultiplier:1,
+		Emittance:emittance,
+		Index:1,
+		Gloss:0,
+		Tint:0,
+		Reflectivity:-1,
+		Transparent:false}
 }
 
 fn MaterialAt(shape:Shape, point:Vector)-> Material {
-	let material = shape.MaterialAt(point)
-	let uv = shape.UV(point)
+	let mut material = shape.MaterialAt(point);
+	let uv = shape.UV(point);
 	if material.Texture != f64::INFINITY {
-		material.Color = material.Texture.Sample(uv.X, uv.Y)
+		material.Color = material.Texture.Sample(uv.X, uv.Y);
 	}
 	if material.GlossTexture != f64::INFINITY {
-		let c = material.GlossTexture.Sample(uv.X, uv.Y)
-		material.Gloss = (c.R + c.G + c.B) / 3
+		let c = material.GlossTexture.Sample(uv.X, uv.Y);
+		material.Gloss = (c.R + c.G + c.B) / 3;
 	}
 	return material
 }

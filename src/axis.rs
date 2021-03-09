@@ -1,8 +1,8 @@
-type Axis = u8
+pub type Axis = u8;
 
-enum Axis {
-    AxisNone =0
-    AxisX=1
-    AxisY=2
-    AxisZ=3
+pub enum Axis {
+    AxisNone =0,
+    AxisX=1,
+    AxisY=2,
+    AxisZ=3,
 }
