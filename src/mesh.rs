@@ -1,153 +1,173 @@
-struct Mesh {
-	Triangles :[Triangle],
-	box:Box,
-	tree:Tree,
+use std::collections::HashMap;
+
+use crate::bbox::*;
+use crate::triangle::*;
+use crate::vector::*;
+use crate::matrix::*;
+use crate::bbox::*;
+use crate::shape::*;
+use crate::material::*;
+use crate::sdf::*;
+use crate::hit::*;
+use crate::vector::*;
+use crate::triangle::*;
+use crate::tree::*;
+use crate::axis::*;
+use crate::ray::*;
+use crate::stl::{self, *};
+pub struct Mesh<T:Shape> {
+	pub Triangles :Vec<Triangle>,
+	pub bx:Option<BBox>,
+	pub tree:Option<Tree<T>>,
 }
 
-fn NewMesh(triangles [Triangle])-> Mesh {
-	return Mesh{triangles, None, None}
+pub fn NewMesh(triangles: Vec<Triangle>)-> Mesh {
+	return Mesh{Triangles:triangles,bx: None,tree: None};
 }
-impl Mesh{
-	fn dirty(&self) {
-		self.box = None
-		self.tree = None
+impl<T> Mesh<T:Shape>{
+	
+	pub fn dirty(&self) {
+		self.bx = None;
+		self.tree = None;
 	}
 	
-	fn Copy(&self)-> Mesh {
-		let mut triangles = [Triangle;self.Triangles.len()], )
-		for i, t in self.Triangles {
-			a = *t
-			triangles[i] = &a
+	pub fn Copy<T>(&self)-> Mesh<T> {
+
+		let mut triangles =vec![Triangle::Default();self.Triangles.len()];
+		for (i, t) in self.Triangles.iter().enumerate() {
+			triangles[i] = *t;
 		}
 		return NewMesh(triangles)
 	}
 	
-	fn  Compile(&self) {
-		if self.tree == None {
-			let mut shapes = [Shape; self.Triangles.len()]
-			for i, triangle in self.Triangles {
-				shapes[i] = triangle
+	pub fn  Compile(&self) {
+
+		if self.tree.is_none() {
+			let mut shapes = vec![Box::new(Triangle::Default() ) ;self.Triangles.len()];
+			for (i, triangle) in self.Triangles.iter().enumerate() {
+				shapes[i] = Box::new(*triangle);
 			}
-			self.tree = NewTree(shapes)
+			self.tree = Some(NewTree(shapes));
 		}
 	}
 	
-	fn Add(&self,b *Mesh) {
-		self.Triangles = append(a.Triangles, b.Triangles...)
-		self.dirty()
+	pub fn Add<T>(&self,b:Mesh<T>) {
+		self.Triangles.append(&mut b.Triangles);
+		self.dirty();
 	}
 	
-	fn BoundingBox(&self) -> Box {
-		if self.box == None {
-			let mut min = self.Triangles[0].V1
-			let mut max = self.Triangles[0].V1
-			for _, t in self.Triangles.iter().enumerate() {
-				min = min.Min(t.V1).Min(t.V2).Min(t.V3)
-				max = max.Max(t.V1).Max(t.V2).Max(t.V3)
+	pub fn BoundingBox(&self) -> BBox {
+		if self.bx.is_none() {
+			let mut min = self.Triangles[0].V1;
+			let mut max = self.Triangles[0].V1;
+			for (_, t) in self.Triangles.iter().enumerate() {
+				min = min.Min(t.V1).Min(t.V2).Min(t.V3);
+				max = max.Max(t.V1).Max(t.V2).Max(t.V3);
 			}
-			self.box = Box{min, max}
+			self.bx = Some(BBox{Min:min,Max: max});
 		}
-		return self.box
+		return self.bx.unwrap();
 	}
 	
-	fn Intersect(&self, r Ray) -> Hit {
-		return self.tree.Intersect(r)
+	pub fn Intersect(&self, r:Ray) -> Hit {
+		return self.tree.unwrap().Intersect(r)
 	}
 	
-	fn UV(&self, p Vector) -> Vector {
-		return Vector{} // not implemented
+	pub fn UV(&self, p:Vector) -> Vector {
+		return Vector::Default() // not implemented
 	}
 	
-	fn MaterialAt(&self, p Vector) -> Material {
-		return Material{} // not implemented
+	pub fn MaterialAt(&self, p:Vector) -> Material {
+		return Material::Default() // not implemented
 	}
 	
-	fn NormalAt(&self, p Vector) -> Vector {
-		return Vector{} // not implemented
+	pub fn NormalAt(&self, p:Vector) -> Vector {
+		return Vector::Default() // not implemented
 	}
 	
-	fn smoothNormalsThreshold(&self, normal:Vector, normals:Vec<Vector>, threshold:f64)-> Vector {
-		let mut result = Vector{}
-		for _, x in normals {
+	pub fn smoothNormalsThreshold(&self, normal:Vector, normals:Vec<Vector>, threshold:f64)-> Vector {
+		let mut result = Vector::Default();
+		for( _, x) in normals.iter().enumerate() {
 			if x.Dot(normal) >= threshold {
-				result = result.Add(x)
+				result = result.Add(*x);
 			}
 		}
 		return result.Normalize()
 	}
 	
-	fn SmoothNormalsThreshold(&self, radians float64) {
-		let threshold = f64::cos(radians)
-		let lookup = make(map[Vector][]Vector)
-		for _, t := range self.Triangles {
-			lookup[t.V1] = append(lookup[t.V1], t.N1)
-			lookup[t.V2] = append(lookup[t.V2], t.N2)
-			lookup[t.V3] = append(lookup[t.V3], t.N3)
+	pub fn SmoothNormalsThreshold(&self, radians:f64) {
+		let threshold = f64::cos(radians);
+		let mut lookup:HashMap<Vector,Vec<Vector>> =HashMap::new(); 
+		for (_, t) in self.Triangles.iter().enumerate() {
+			(lookup.get_mut(&mut t.V1).unwrap()).push(t.N1);
+			(lookup.get_mut(&mut t.V2).unwrap()).push(t.N2);
+			(lookup.get_mut(&mut t.V3).unwrap()).push(t.N3);
 		}
-		for _, t in self.Triangles.iter().enumerate() {
-			t.N1 = smoothNormalsThreshold(t.N1, lookup[t.V1], threshold)
-			t.N2 = smoothNormalsThreshold(t.N2, lookup[t.V2], threshold)
-			t.N3 = smoothNormalsThreshold(t.N3, lookup[t.V3], threshold)
-		}
-	}
-	
-	fn SmoothNormals(&self) {
-		let mut lookup :HashMap<Vector,Vector>=HashMap::new()
-		for _, t in self.Triangles.iter().enumerate() {
-			lookup[t.V1] = lookup[t.V1].Add(t.N1)
-			lookup[t.V2] = lookup[t.V2].Add(t.N2)
-			lookup[t.V3] = lookup[t.V3].Add(t.N3)
-		}
-		for k, v in lookup.iter().enumerate() {
-			lookup[k] = v.Normalize()
-		}
-		for _, t in self.Triangles.iter_mut().enumerate() {
-			t.N1 = lookup[t.V1]
-			t.N2 = lookup[t.V2]
-			t.N3 = lookup[t.V3]
+		for (_, t) in self.Triangles.iter().enumerate() {
+			t.N1 = self.smoothNormalsThreshold(t.N1, *lookup.get_mut(&t.V1).unwrap(), threshold);
+			t.N2 = self.smoothNormalsThreshold(t.N2, *lookup.get_mut(&t.V2).unwrap(), threshold);
+			t.N3 = self.smoothNormalsThreshold(t.N3, *lookup.get_mut(&t.V3).unwrap(), threshold);
 		}
 	}
 	
-	fn UnitCube(&self) {
-		self.FitInside(Box{Vector{}, Vector{1, 1, 1}}, Vector{})
-		self.MoveTo(Vector{}, Vector{0.5, 0.5, 0.5})
+	pub fn SmoothNormals(&self) {
+		let mut lookup :HashMap<Vector,Vector>=HashMap::new();
+		for( _, t) in self.Triangles.iter().enumerate() {
+			(lookup.get_mut(&mut t.V1).unwrap()).Add(t.N1);
+			(lookup.get_mut(&mut t.V2).unwrap()).Add(t.N2);
+			(lookup.get_mut(&mut t.V3).unwrap()).Add(t.N3);
+		}
+		for (k,v)  in lookup {
+			let vv=lookup.get_mut(&mut k).unwrap();
+			*vv= v.Normalize();
+		}
+		for (_, t) in self.Triangles.iter_mut().enumerate() {
+			(t).N1 = *lookup.get_mut(&mut t.V1).unwrap();
+			(t).N2 = *lookup.get_mut(&mut t.V2).unwrap();
+			(t).N3 = *lookup.get_mut(&mut t.V3).unwrap();
+		}
 	}
 	
-	fn MoveTo(&self, position:Vector, anchor:Vector) {
-		let matrix = Translate(position.Sub(self.BoundingBox().Anchor(anchor)))
-		self.Transform(matrix)
+	pub fn UnitCube(&self) {
+		self.FitInside(BBox{Min:Vector::Default(),Max:Vector{X:1.0,Y: 1.0,Z: 1.0}}, Vector::Default());
+		self.MoveTo(Vector::Default(), Vector{X:0.5,Y: 0.5,Z: 0.5});
 	}
 	
-	fn FitInside(&self, box:Box, anchor:Vector) {
-		let scale = box.Size().Div(self.BoundingBox().Size()).MinComponent()
-		let extra = box.Size().Sub(self.BoundingBox().Size().MulScalar(scale))
-		let mut matrix = Identity()
-		matrix = matrix.Translate(self.BoundingBox().Min.Negate())
-		matrix = matrix.Scale(Vector{scale, scale, scale})
-		matrix = matrix.Translate(box.Min.Add(extra.Mul(anchor)))
-		self.Transform(matrix)
+	pub fn MoveTo(&self, position:Vector, anchor:Vector) {
+		let matrix = Translate(position.Sub(self.BoundingBox().Anchor(anchor)));
+		self.Transform(matrix);
 	}
 	
-	fn Transform(&self, matrix:Matrix) {
-		for _, t in self.Triangles.iter().enumerate() {
-			t.V1 = matrix.MulPosition(t.V1)
-			t.V2 = matrix.MulPosition(t.V2)
-			t.V3 = matrix.MulPosition(t.V3)
-			t.N1 = matrix.MulDirection(t.N1)
-			t.N2 = matrix.MulDirection(t.N2)
-			t.N3 = matrix.MulDirection(t.N3)
+	pub fn FitInside(&self, bx:BBox, anchor:Vector) {
+		let scale = bx.Size().Div(self.BoundingBox().Size()).MinComponent();
+		let extra = bx.Size().Sub(self.BoundingBox().Size().MulScalar(scale));
+		let mut matrix = Identity();
+		matrix = matrix.Translate(self.BoundingBox().Min.Negate());
+		matrix = matrix.Scale(Vector{X:scale,Y: scale,Z: scale});
+		matrix = matrix.Translate(bx.Min.Add(extra.Mul(anchor)));
+		self.Transform(matrix);
+	}
+	
+	pub fn Transform(&self, matrix:Matrix) {
+		for mut t in self.Triangles.iter() {
+			t.V1 = matrix.MulPosition(t.V1) ;
+			t.V2 = matrix.MulPosition(t.V2) ;
+			t.V3 = matrix.MulPosition(t.V3) ;
+			t.N1 = matrix.MulDirection(t.N1);
+			t.N2 = matrix.MulDirection(t.N2);
+			t.N3 = matrix.MulDirection(t.N3);
 		}
 		self.dirty()
 	}
 	
-	fn etMaterial(&self, material:Material) {
-		for _, t in self.Triangles {
-			t.Material = &material
+	pub fn etMaterial(&self, material:Material) {
+		for mut t in self.Triangles {
+			t.Material = Some(material)
 		}
 	}
 	
-	fn SaveSTL(&self, path:&str) {
-		return SaveSTL(path, self)
+	pub fn SaveSTL(&self, path:&str) {
+		return stl::SaveSTL(String::from(path), *self);
 	}
 	
 }

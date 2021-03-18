@@ -1,18 +1,18 @@
-use crate::color::*;
+use crate::{color::*, ray::Ray, tree};
 use crate::texture::*;
 use crate::vector::*;
 use crate::shape::*;
 use crate::tree::*;
 use crate::hit::*;
 
-struct Scene {
-	Color        :Color,
-	Texture      :Texture,
-	TextureAngle :f64,
-	Shapes       :Vec<Shape>,
-	Lights       :Vec<Shape>,
-	tree         :Tree,
-	rays         :u64,
+pub struct Scene {
+	pub Color        :Color,
+	pub Texture      :Option<Texture>,
+	pub TextureAngle :f64,
+	pub Shapes       :Vec<Box<dyn Shape>>,
+	pub Lights       :Vec<Box<dyn Shape>>,
+	pub tree         :Option<Tree>,
+	pub rays         :u64,
 }
 
 impl Scene{
@@ -21,15 +21,20 @@ impl Scene{
 		for shape in self.Shapes {
 			shape.Compile();
 		}
-		if self.tree == None {
-			*self.tree = NewTree(self.Shapes);
+		//TODO: check with None Some
+		match self.tree {
+			None=>{
+				let m=(self).tree.unwrap();
+				m= NewTree(self.Shapes);
+			}
+			_=>{}
 		}
 	}
 	
-	pub fn Add(&mut self,shape :Shape) {
-		self.Shapes.append(shape);
-		if shape.MaterialAt(Vector::Default()).Emittance > 0 {
-			self.Lights.append(shape) ;
+	pub fn Add(&mut self,shape :Box<dyn Shape>) {
+		self.Shapes.push(shape);
+		if shape.MaterialAt(Vector::Default()).Emittance.unwrap() > 0.0 {
+			self.Lights.push(shape);
 		}
 	}
 	
@@ -38,8 +43,8 @@ impl Scene{
 	}
 	
 	pub fn Intersect(&mut self,r:Ray)-> Hit {
-		*self.rays=*self.rays+1;
-		self.tree.Intersect(r)
+		(*self).rays=(*self).rays+1;
+		self.tree.unwrap().Intersect(r)
 	}
 }
 

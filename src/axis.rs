@@ -1,5 +1,5 @@
-pub type Axis = u8;
-
+// pub type Axis = u8;
+#[derive(PartialEq)]
 pub enum Axis {
     AxisNone =0,
     AxisX=1,

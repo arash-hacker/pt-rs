@@ -1,9 +1,20 @@
 use image::*;
 use std::time;
 use crate::common;
-pub const PI:f64=3.14159265359;
 use std::path::Path;
 use crate::vector::{self,Vector};
+use crate::bbox::*;
+use crate::shape::*;
+use crate::material::*;
+use crate::sdf::*;
+use crate::hit::*;
+use crate::vector::*;
+use crate::triangle::*;
+use crate::tree::*;
+use crate::axis::*;
+
+
+pub static PI:f64=3.14159265359;
 
 pub fn Radians(degrees :f64)-> f64 {
 	return degrees * PI / 180.0
@@ -32,22 +43,22 @@ pub fn Cone(direction :Vector, theta:f64, u:f64, v:f64) -> Vector {
 	return d
 }
 //TODO error handling inside result 
-pub fn LoadImage(path:String) ->ImageResult<DynamicImage> {
-	return image::open(path);
+pub fn LoadImage(path:String) ->image::ImageBuffer<image::Rgb<u8>, Vec<u8>> {
+	return image::open(path).unwrap().to_rgb8();
 }
 
-pub fn SavePNG(path:String, im:image::RgbaImage) {
+pub fn SavePNG(path:String, im:image::ImageBuffer<image::Rgb<u8>, Vec<u8>>) {
 	im.save(path).unwrap()
 }
 
-pub fn Median(items :Vec<f64>)-> f64 {
+pub fn Median(items :Vec<i32>)-> f64 {
 	let n = items.len() ;
 		if n== 0 {0.0}
-		else if n%2 == 1 {items[n/2]}
+		else if n%2 == 1 {items[n/2] as f64}
 		else {	
 			let a = items[n/2-1];
 			let b = items[n/2];
-			return (a + b) / 2.0;
+			return (a + b) as f64 / 2.0;
 		}
 	
 }

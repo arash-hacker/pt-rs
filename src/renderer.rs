@@ -1,203 +1,228 @@
-use std::time::{Duration, Instant};
+use std::time::{self, SystemTime, Duration, Instant};
+use rand::random;
 
-struct Renderer{
-	Scene              :Scene,
-	Camera             :Camera,
-	Sampler            :Sampler,
-	Buffer             :Buffer,
-	SamplesPerPixel    :int,
-	StratifiedSampling :bool,
-	AdaptiveSamples    :int,
-	AdaptiveThreshold  :float64,
-	AdaptiveExponent   :float64,
-	FireflySamples     :int,
-	FireflyThreshold   :float64,
-	NumCPU             :int,
-	Verbose            :bool,
-};
+use crate::{bbox::*, buffer::{Buffer, ChannelEnum}, camera::Camera, sampler, scene::Scene};
+use crate::shape::*;
+use crate::material::*;
+use crate::sdf::*;
+use crate::buffer::*;
+use crate::hit::*;
+use crate::vector::*;
+use crate::sampler::*;
+use crate::triangle::*;
+use crate::tree::*;
+use crate::axis::*;
+use crate::util::{self, *};
+pub struct Renderer{
+	pub Scene              :Option<Scene>,
+	pub Camera             :Option<Camera>,
+	pub Sampler            :Option<Box<dyn Sampler>>,
+	pub Buffer             :Option<Buffer>,
+	pub SamplesPerPixel    :f64,
+	pub StratifiedSampling :bool,
+	pub AdaptiveSamples    :f64,
+	pub AdaptiveThreshold  :f64,
+	pub AdaptiveExponent   :f64,
+	pub FireflySamples     :f64,
+	pub FireflyThreshold   :f64,
+	pub NumCPU             :i32,
+	pub Verbose            :bool,
+}
 
-fn NewRenderer(scene :Scene, camera :Camera, sampler :Sampler, w:i32, h:i32) -> Renderer {
-	let r = Renderer{};
-	self.Scene = scene;
-	self.Camera = camera;
-	self.Sampler = sampler;
-	self.Buffer = NewBuffer(w, h);
-	self.SamplesPerPixel = 1;
-	self.StratifiedSampling = false;
-	self.AdaptiveSamples = 0;
-	self.AdaptiveThreshold = 1;
-	self.AdaptiveExponent = 1;
-	self.FireflySamples = 0;
-	self.FireflyThreshold = 1;
-	self.NumCPU = runtime.NumCPU();
-	self.Verbose = true;
+pub fn NewRenderer(scene :Scene, camera :Camera, sampler :Box<dyn Sampler>, w:i32, h:i32) -> Renderer {
+	let mut r = Renderer::Default();
+	r.Scene = Some(scene);
+	r.Camera = Some(camera);
+	r.Sampler = Some(sampler);
+	r.Buffer = Some(NewBuffer(w, h));
+	r.SamplesPerPixel = 1.0;
+	r.StratifiedSampling = false;
+	r.AdaptiveSamples = 0.0;
+	r.AdaptiveThreshold = 1.0;
+	r.AdaptiveExponent = 1.0;
+	r.FireflySamples = 0.0;
+	r.FireflyThreshold = 1.0;
+	r.NumCPU = 2;
+	r.Verbose = true;
 	return r
 }
 
 impl Renderer {
-	fn run(&self) {
-		let scene = self.Scene;
-		let camera = self.Camera;
-		let sampler = self.Sampler;
-		let buf = self.Buffer;
-		let (w, h) = (buf.W, buf.H);
-		let spp = self.SamplesPerPixel;
-		let sppRoot = f64::sqrt(self.SamplesPerPixel as f64) as i32;
-		let ncpu = self.NumCPU;
+	pub fn Default()->Renderer{
+		return Renderer{
+			Scene:None,
+			Camera:None,
+			Sampler:None,
+			Buffer:None,
+			SamplesPerPixel:0.0,
+			StratifiedSampling:false,
+			AdaptiveSamples:0.0,
+			AdaptiveThreshold:0.0,
+			AdaptiveExponent:0.0,
+			FireflySamples:0.0,
+			FireflyThreshold:0.0,
+			NumCPU:0,
+			Verbose:false,
+		}
+	}
+	pub fn run(&self) {
+		let mut scene = self.Scene.unwrap();
+		let mut camera = self.Camera.unwrap();
+		let mut sampler = self.Sampler.unwrap();
+		let mut buf = self.Buffer.unwrap();
+		let  (w, h) = (buf.W, buf.H);
+		let mut spp = self.SamplesPerPixel;
+		let mut sppRoot = f64::sqrt(self.SamplesPerPixel as f64) as i32;
+		let mut ncpu = self.NumCPU;
 
-		scene.Compile()
-		self.printf("{} x {} pixels, {} spp, {} cores\n", w, h, spp, ncpu)
-		let start = SystemTime.Now()
-		scene.rays = 0
+		scene.Compile();
+		println!("{} x {} pixels, {} spp, {} cores\n", w, h, spp, ncpu);
+		let start = Instant::now();
+		scene.rays = 0;
 		for i in 0..ncpu {
-			let rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
-			for y in i..h.step_by(ncpu) {
+			let rnd = random();
+			for y in (i..h).step_by(ncpu as usize) {
 				for x in 0..w {
 					if self.StratifiedSampling {
 						for u in 0..sppRoot {
 							for v in 0..sppRoot {
-								let fu = ((u )as f64 + 0.5) / (sppRoot) as f64
-								let fv = ((v )as f64 + 0.5) / (sppRoot) as f64
-								let ray = camera.CastRay(x, y, w, h, fu, fv, rnd)
-								let sample = sampleself.Sample(scene, ray, rnd)
-								buf.AddSample(x, y, sample)
+								let fu = ((u )as f64 + 0.5) / (sppRoot) as f64;
+								let fv = ((v )as f64 + 0.5) / (sppRoot) as f64;
+								let ray = camera.CastRay(x, y, w, h, fu, fv, rand::random());
+								let sample = sampler.Sample(scene, ray, rand::random());
+								buf.AddSample(x, y, sample);
 							}
 						}
 					} else {
 						// random subsampling
-						for i in 0..spp {
-							let fu = rand::random::<f64>()
-							let fv = rand::random::<f64>()
-							let ray = camera.CastRay(x, y, w, h, fu, fv, rnd)
-							let sample = sampleself.Sample(scene, ray, rnd)
-							buf.AddSample(x, y, sample)
+						for i in 0..(spp as i32) {
+							let fu = rand::random::<f64>();
+							let fv = rand::random::<f64>();
+							let ray = camera.CastRay(x, y, w, h, fu, fv, rnd);
+							let sample = sampler.Sample(scene, ray, rnd);
+							buf.AddSample(x, y, sample);
 						}
 					}
 					// adaptive sampling
-					if self.AdaptiveSamples > 0 {
-						let mut v = buf.StandardDeviation(x, y).MaxComponent()
-						v = Clamp(v/self.AdaptiveThreshold, 0, 1)
-						v = f64::powf(v, self.AdaptiveExponent)
-						samples := int(v * (self.AdaptiveSamples) as f64)
-						for i in 0..samples; i++ {
-							let fu = rand::random::<f64>()
-							let fv = rand::random::<f64>()
-							let ray = camera.CastRay(x, y, w, h, fu, fv, rnd)
-							let sample = sampleself.Sample(scene, ray, rnd)
+					if self.AdaptiveSamples > 0.0 {
+						let mut v = buf.StandardDeviation(x, y).MaxComponent();
+						v = util::Clamp(v/self.AdaptiveThreshold, 0.0, 1.0);
+						v = f64::powf(v, self.AdaptiveExponent);
+						let samples = (v * (self.AdaptiveSamples) as f64) as  i32;
+						for i in 0..samples {
+							let fu = rand::random::<f64>();
+							let fv = rand::random::<f64>();
+							let ray = camera.CastRay(x, y, w, h, fu, fv, rnd);
+							let sample = sampler.Sample(scene, ray, rnd);
 							buf.AddSample(x, y, sample)
 						}
 					}
 					// firefly reduction
-					if self.FireflySamples > 0 {
+					if self.FireflySamples > 0.0 {
 						if buf.StandardDeviation(x, y).MaxComponent() > self.FireflyThreshold {
-							for i := 0; i < self.FireflySamples; i++ {
-								fu := rand::random::<f64>()
-								fv := rand::random::<f64>()
-								ray := camera.CastRay(x, y, w, h, fu, fv, rnd)
-								sample := sampleself.Sample(scene, ray, rnd)
-								buf.AddSample(x, y, sample)
+							for i in 0..(self.FireflySamples as i32) {
+								let fu = rand::random::<f64>();
+								let fv = rand::random::<f64>();
+								let ray = camera.CastRay(x, y, w, h, fu, fv, rnd);
+								let sample = sampler.Sample(scene, ray, rnd);
+								buf.AddSample(x, y, sample);
 							}
 						}
 					}
 				}
-				ch <- 1
+				
 			}
 		}
-		self.showProgress(start, scene.RayCount(), 0, h)
-		for i in 0..h; i {
-			self.showProgress(start, scene.RayCount(), i+1, h)
+		self.showProgress(start, scene.RayCount(), 0, h);
+		for i in 0..h {
+			self.showProgress(start, scene.RayCount(), i+1, h);
 		}
-		self.printf("\n")
+		println!("\n")
 	}
 	
-	fn printf(&self,format:String, a ...interface{}) {
+	// pub fn printf(&self,format:String, a ...interface{}) {
+	// 	if !self.Verbose {
+	// 		return
+	// 	}
+	// 	println!(format, a...)
+	// }
+	
+	pub fn showProgress(&self, start:Instant, rays:u64, i:i32, h:i32) {
 		if !self.Verbose {
 			return
 		}
-		println!(format, a...)
-	}
-	
-	fn showProgress(&self, start time.Time, rays:u64, i:i32, h:i32) {
-		if !self.Verbose {
-			return
-		}
-		let pct = int(100 * (i as f64) / (h as f64))
-		let elapsed = time.Since(start)
-		let rps = (rays as f64) / elapsed.Seconds()
-		println!("\r{} / {} ({}%%) [", i, h, pct)
+		let pct = (100.0 * (i as f64) / (h as f64)) as i32;
+		
+		let elapsed = time::Instant::now().duration_since(start);
+		let rps = (rays as f64) / elapsed.as_secs() as f64;
+		println!("\r{} / {} ({}%%) [", i, h, pct);
 		for p in (0..100).step_by(3){
 			if pct > p {
-				println!("=")
+				println!("=");
 			} else {
-				println!(" ")
+				println!(" ");
 			}
 		}
-		fmt.Printf("] %s %s ", DurationString(elapsed), NumberString(rps))
+		println!("] {} {} ", DurationString(elapsed), NumberString(rps))
 	}
 	
-	fn writeImage(&self, path string, buf *Buffer, channel Channel, wg *sync.WaitGroup) {
-		defer wg.Done()
-		im := buf.Image(channel)
-		if err := SavePNG(path, im); err != nil {
-			panic(err)
-		}
+	pub fn writeImage(&self, path :String, buf :Buffer,channel:ChannelEnum) {
+		let im = buf.Image(channel);
+		SavePNG(path, im);
 	}
 	
-	fn Render(&self) image.Image {
-		self.run()
-		return self.Buffeself.Image(ColorChannel)
+	pub fn Render(&self) ->image::ImageBuffer<image::Rgb<u8>, Vec<u8>> {
+		self.run();
+		return self.Buffer.unwrap().Image(ChannelEnum::ColorChannel);
 	}
 	
-	fn IterativeRender(&self,pathTemplate string, iterations int) image.Image {
-		var wg sync.WaitGroup
-		for i := 1; i <= iterations; i++ {
-			self.printf("\n[Iteration %d of %d]\n", i, iterations)
-			self.run()
-			path := pathTemplate
-			if strings.Contains(path, "%") {
-				path = fmt.Sprintf(pathTemplate, i)
+	pub fn IterativeRender(&self,pathTemplate:String, iterations:i32) ->image::ImageBuffer<image::Rgb<u8>, Vec<u8>> {
+		for i in 1..iterations+1 {
+			println!("\n[Iteration {} of {}]\n", i, iterations);
+			self.run();
+			let path = pathTemplate;
+			if path.contains("%") {
+				//path = fmt.Sprintf(pathTemplate, i)
 			}
-			buf := self.Buffeself.Copy()
-			wg.Add(1)
-			go self.writeImage(path, buf, ColorChannel, &wg)
+			let buf = self.Buffer.unwrap().Copy();
+			self.writeImage(path, buf, ChannelEnum::ColorChannel)
 			// wg.Add(1)
 			// go self.writeImage("deviation.png", buf, StandardDeviationChannel, &wg)
 			// wg.Add(1)
 			// go self.writeImage("samples.png", buf, SamplesChannel, &wg)
 		}
-		wg.Wait()
-		return self.Buffeself.Image(ColorChannel)
+		return self.Buffer.unwrap().Image(ChannelEnum::ColorChannel)
 	}
 	
-	fn ChannelRender(&self) <-chan image.Image {
-		ch := make(chan image.Image)
-		go func() {
-			for i := 1; ; i++ {
-				self.run()
-				ch <- self.Buffeself.Image(ColorChannel)
-			}
-		}()
-		return ch
-	}
+	// pub fn ChannelRender(&self) <-chan image.Image {
+	// 	ch := make(chan image.Image)
+	// 	go func() {
+	// 		for i := 1; ; i++ {
+	// 			self.run()
+	// 			ch <- self.Buffeself.Image(ChannelEnum::ColorChannel)
+	// 		}
+	// 	}()
+	// 	return ch
+	// }
 	
-	fn FrameRender(&self,path string, iterations int, wg *sync.WaitGroup) {
-		for i in 1..iterations+1 {
-			self.run()
-		}
-		let buf := self.Buffeself.Copy()
-		wg.Add(1)
-		go self.writeImage(path, buf, ColorChannel, wg)
-	}
+	// pub fn FrameRender(&self,path string, iterations int, wg *sync.WaitGroup) {
+	// 	for i in 1..iterations+1 {
+	// 		self.run()
+	// 	}
+	// 	let buf := self.Buffeself.Copy()
+	// 	wg.Add(1)
+	// 	go self.writeImage(path, buf, ChannelEnum::ColorChannel, wg)
+	// }
 	
-	fn TimedRender(&self, duration:time.Duration)-> image.Image {
-		let start =SystemTime::now();
-		for {
-			self.run()
-			if time.Since(start) > duration {
+	pub fn TimedRender(&self, duration:time::Duration)-> image::ImageBuffer<image::Rgb<u8>, Vec<u8>> {
+		let start =Instant::now();
+		loop {
+			self.run();
+			if start.elapsed() > duration {
 				break
 			}
 		}
-		return self.Buffeself.Image(ColorChannel)
+		return self.Buffer.unwrap().Image(ChannelEnum::ColorChannel)
 	}
 	
 }

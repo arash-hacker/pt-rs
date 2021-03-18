@@ -2,6 +2,15 @@ use crate::color::{self,Color};
 use crate::vector::Vector;
 use crate::util;
 use crate::common;
+use crate::bbox::*;
+use crate::shape::*;
+use crate::material::*;
+use crate::hit::*;
+use crate::vector::*;
+use crate::triangle::*;
+use crate::tree::*;
+use crate::axis::*;
+
 use std::{collections::HashMap};
 use image::*;
 
@@ -9,9 +18,9 @@ pub fn init() {}
 
 #[derive(Debug, Clone)]
 pub struct Texture{
-	Width  :i32,
-	Height :i32,
-	Data   :Vec<Color>,
+	pub Width  :i32,
+	pub Height :i32,
+	pub Data   :Vec<Color>,
 }
 fn GetTexture(path:&str)-> Option<Texture> {
 
@@ -33,12 +42,12 @@ fn GetTexture(path:&str)-> Option<Texture> {
 
 fn LoadTexture(path:&str) ->Option<Texture> {
 	println!("Loading IMG: {}\n", path);
-	let im = util::LoadImage(path.to_string()).unwrap();
+	let im = util::LoadImage(path.to_string());
 	return Some(NewTexture(im))
 }
 
 
-pub fn NewTexture(im:image::DynamicImage) -> Texture {
+pub fn NewTexture(im:image::ImageBuffer<image::Rgb<u8>, Vec<u8>>) -> Texture {
 	//TOD: better comparision spread like js
 	//https://subscription.packtpub.com/book/programming/9781788623926/1/ch01lvl1sec24/accepting-a-variable-number-of-arguments
 	let size:i32 = i32::max( im.dimensions().0 as i32,im.dimensions().1 as i32);

@@ -1,13 +1,35 @@
-use rand;
-#[derive(Debug,Clone, Copy)]
+use std::hash::{Hash, Hasher};
+use std::cmp::Eq;
+use crate::shape::*;
+use crate::material::*;
+use crate::sdf::*;
+use crate::hit::*;
+use crate::bbox::*;
+use crate::triangle::*;
+use crate::tree::*;
+extern crate rand;
+
+#[derive(Debug,Clone, Copy,PartialEq)]
 pub struct Vector {
 	pub X:f64,
 	pub Y:f64,
 	pub Z:f64,
 }
 
+impl Hash for Vector {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (self.X as i32).hash(state);
+        (self.Y as i32).hash(state);
+        (self.Z as i32).hash(state);
+    }
+}
+impl Eq for Vector {
+    
+}
+
+
 pub fn V(x:f64, y:f64, z:f64 )-> Vector {
-	Vector{X:x, Y:y, Z:z}
+	return Vector{X:x, Y:y, Z:z}
 }
 
 pub fn RandomUnitVector()-> Vector {

@@ -1,8 +1,13 @@
 use crate::vector::*;
 use crate::ray::*;
 use crate::bbox::*;
+use crate::color::*;
+use crate::axis::*;
+use crate::material::*;
+use crate::matrix::*;
+use crate::hit::*;
 
-trait Shape  {
+pub trait Shape  {
 	fn GetType(&self)->&str;
 	fn Compile(&self)->();
 	fn BoundingBox(&self) ->BBox;
@@ -11,51 +16,59 @@ trait Shape  {
 	fn NormalAt(&self,v:Vector) ->Vector;
 	fn MaterialAt(&self,v:Vector) ->Material;
 }
-#[derive(Debug,Clone, Copy)]
-struct TransformedShape {
-	shape:Shape,
-	matrix:Matrix,
-	inverse:Matrix,
+pub struct TransformedShape {
+	pub shape:Box<dyn Shape>,
+	pub matrix:Matrix,
+	pub inverse:Matrix,
 }
 
-fn NewTransformedShape(s:Shape, m:Matrix) ->dyn Shape {
-	TransformedShape{shape:s,matrix: m,inverse: m.Inverse()}
+pub fn NewTransformedShape(s:Box<dyn Shape>, m:Matrix) ->Box<dyn Shape> {
+	return Box::new(TransformedShape{shape:s, matrix:m, inverse:m.Inverse()})
 }
 
-impl TransformedShape {
+impl Shape for TransformedShape {
+
+	fn Compile(&self)->(){()}
+	fn UV(&self,v:Vector) ->Vector{Vector::Default()}
+	fn NormalAt(&self,v:Vector) ->Vector{Vector::Default()}
+	fn MaterialAt(&self,v:Vector) ->Material{Material::Default()}
+
+	fn GetType(&self)-> &str {
+		"TransformedShape"
+	}
 
 	fn BoundingBox(&self)-> BBox {
 		return self.matrix.MulBox(self.shape.BoundingBox())
 	}
 	
-	fn Intersect(r:Ray)->Hit {
+	fn Intersect(&self, r:Ray)->Hit {
 		let shapeRay = self.inverse.MulRay(r);
 		let mut hit = self.shape.Intersect(shapeRay);
 		if !hit.Ok() {
 			return hit;
 		}
-		let shape = hit.shape;
+		let shape = hit.Shape.unwrap();
 		let shapePosition = shapeRay.Position(hit.T);
 		let shapeNormal = shape.NormalAt(shapePosition);
 		let position = self.matrix.MulPosition(shapePosition);
 		let mut normal = self.inverse.Transpose().MulDirection(shapeNormal);
 		let material = MaterialAt(shape, shapePosition);
 		let mut inside = false;
-		if shapeNormal.Dot(shapeRay.Direction) > 0 {
+		if shapeNormal.Dot(shapeRay.Direction) > 0.0 {
 			normal = normal.Negate();
 			inside = true;
 		}
 		let ray = Ray{ Origin:position,Direction: normal};
 		let info = HitInfo{
-			Shape:shape,
+			Shape:Some(shape),
 			Position: position,
-			Normal:  normal,
-			Ray:   ray,
-			Material:    material,
-			Inside:	 inside
+			Normal:normal,
+			Ray:ray,
+			Material:material,
+			Inside:inside
 		};
 		hit.T = position.Sub(r.Origin).Length();
-		hit.HitInfo = info;
+		hit.HitInfo = Some(info);
 		return hit;
 	}
 }
